@@ -242,25 +242,35 @@ def get_page_urls(url):
 
 # --- Extract text content from a URL (web or PDF) ---
 def get_url_content(url):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers, timeout=15)
-    
+    response = requests.get(url)
     if url.endswith('.pdf'):
         pdf = io.BytesIO(response.content)
-        doc = fitz.open(stream=pdf, filetype="pdf")
+        with open('pdf.pdf', 'wb') as file:
+            file.write(pdf.read())
+        doc = fitz.open('pdf.pdf')
         return (url, ''.join([page.get_text() for page in doc]))
     else:
         soup = BeautifulSoup(response.content, 'html.parser')
-        content = soup.find_all('div')  # more generic than WordPress-only
-        text = [c.get_text().strip() for c in content if c.get_text().strip() != '']
-        text = [line for item in text for line in item.split('\n') if line.strip() != '']
-        
-        # If "ARTS ON:" exists, cut content there, else return all text
-        if "ARTS ON:" in text:
-            arts_on = text.index("ARTS ON:")
-            text = text[:arts_on]
-        
-        return (url, '\n'.join(text))
+
+        # Detect WordPress by looking for common classes or meta generator
+        is_wordpress = (
+            soup.find('meta', attrs={'name': 'generator', 'content': lambda x: x and 'WordPress' in x}) 
+            or soup.find(class_='wpb_content_element')
+            or soup.find(id='wp-content')
+        )
+
+        if is_wordpress:
+            # WordPress-specific scraping
+            content = soup.find_all('div', class_='wpb_content_element')
+            text = [c.get_text().strip() for c in content if c.get_text().strip()]
+            text = [line for item in text for line in item.split('\n') if line.strip()]
+            return (url, "\n".join(text))
+        else:
+            # Generic scraping (Wikipedia, blogs, docs, etc.)
+            paragraphs = soup.find_all(['p', 'h1', 'h2', 'h3'])
+            text = [p.get_text().strip() for p in paragraphs if p.get_text().strip()]
+            return (url, "\n".join(text))
+
 
 
 # --- Create retriever from scraped documents ---
