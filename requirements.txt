@@ -6,6 +6,12 @@ pydantic==1.10.8
 sentence-transformers==2.2.2
 streamlit==1.27.2
 PyMuPDF==1.22.5
+# Core LLM + Embeddings
+transformers==4.41.2
 sentence-transformers==2.2.2
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==2.1.0
+
 
 
